@@ -25,3 +25,20 @@ For each work, add exact version/date and commit; research question and claims; 
 ## Source caution
 
 Trial counts, percentages, speedups, and coverage figures in these works are not independent findings of this programme. Attribute them to their authors and verify them against the papers and artifacts before comparison.
+
+
+## Distributed runtime verification and incomplete evidence
+
+| Work | Area | Relevance / overlap | Status |
+|---|---|---|---|
+| [Uncertainty in Runtime Verification: A Survey](https://doi.org/10.1016/j.cosrev.2023.100594) (Taleb, Hallé & Khoury, 2023) | Incomplete/imprecise traces | Direct survey of uncertainty sources and sound monitoring methods | Identified; full taxonomy review pending |
+| [Runtime Verification Under Access Restrictions](https://constellation.uqac.ca/id/eprint/7361/1/paper.pdf) | Partial observability | Models incomplete/uncertain monitor inputs and sound loss-tolerant monitoring | Identified; methods review pending |
+| [Failure-aware Runtime Verification of Distributed Systems](https://drops.dagstuhl.de/entities/document/10.4230/LIPIcs.FSTTCS.2015.590) | Distributed monitoring under failures | Out-of-order delivery, failures, three-valued MTL semantics, soundness and completeness | Identified; methods review pending |
+| [Runtime Verification over Out-of-order Streams](https://people.inf.ethz.ch/basin/pubs/tocl19.pdf) | Out-of-order stream monitoring | Three-valued semantics for knowledge gaps and conservative verdicts | Identified; methods review pending |
+| [Sound Distributed Runtime Verification under Incomplete Evidence](https://arxiv.org/abs/2611.32868) (Kekatos et al., 2026) | Evidence completeness and distributed monitoring | Directly covers indistinguishable executions, abstention, sequence gaps, beacons, silence, membership, coordinator failure and recovery | Paper inspected; target implementation not located; independent toy model is illustrative only |
+
+### Consequence for the current experiment
+
+The bounded ground-truth-versus-online experiment is not a novelty result. The target paper's Theorem 3.1 already formalizes indistinguishable executions and the need for abstention; Section 4 covers sequence gaps and high-water beacons. The 2023 survey and earlier papers cover incomplete traces and three-valued monitoring.
+
+The remaining possible question is narrower and empirical: whether evaluation harnesses in selected published systems clearly separate privileged experimenter ground truth from the information available to the online monitor, and whether reported metrics measure online detection rather than harness-side fault knowledge. This is only a candidate for a structured artifact audit, not an approved research question.
