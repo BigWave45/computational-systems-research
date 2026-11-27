@@ -88,9 +88,24 @@ class Verifier:
 
     def receive_event(self, event: Event) -> None:
         self.held.setdefault(event.node, {})[event.seq] = event
+        beacon = self.beacons.get(event.node)
+        if (
+            beacon is not None
+            and event.seq > beacon.high_water
+            and event.ts <= beacon.frontier
+        ):
+            self.degraded.add(event.node)
 
     def receive_beacon(self, beacon: Beacon) -> None:
         self.beacons[beacon.node] = beacon
+        # Delivery may be reordered: a later-sequence event can arrive first.
+        conflicts = [
+            event
+            for event in self.held.get(beacon.node, {}).values()
+            if event.seq > beacon.high_water and event.ts <= beacon.frontier
+        ]
+        if conflicts:
+            self.degraded.add(beacon.node)
 
     def contiguous_through(self, node: str, high_water: int) -> bool:
         held = self.held.get(node, {})
@@ -134,7 +149,8 @@ def check_timestamp_equality():
     conflicts = verifier.post_beacon_boundary_conflicts("A")
     assert frontier_before_later_arrival == 5
     assert conflicts == [later]
-    return "PASS: equal-timestamp later event contradicts the closed beacon frontier"
+    assert verifier.coverage_frontier() is None
+    return "PASS: equal-timestamp later event invalidates the previously accepted frontier"
 
 
 def check_sequence_gap():
