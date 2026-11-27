@@ -25,3 +25,16 @@
 ## Operating rule
 
 Record future changes to the question, scope, method, and funding strategy with date, evidence, and rationale. Do not erase superseded decisions; add a new entry.
+
+
+## 2026-11-27 — Classify ground-truth versus online-evidence toy experiment
+
+**Experiment:** Enumerated 20 small trace/delivery schedules comparing a privileged evaluator, a naive online observer without a completion commitment, and an online observer with a trusted sequence high-water mark.
+
+**Observed in this bounded model:** two false all-clears from the deliberately unsafe no-beacon observer; zero false all-clears from the beacon-aware observer; seven beacon-aware incomplete outcomes. A safe no-beacon observer abstains. These are constructed-model counts, not empirical rates.
+
+**Prior-art finding:** This is not a novel result. Kekatos et al. (arXiv:2611.32868), Theorem 3.1 and Section 4, already formalize indistinguishable executions, abstention, sequence gaps, and high-water beacons. Earlier runtime-verification literature also studies incomplete traces and three-valued monitoring.
+
+**Decision:** Keep the code as a sanity-check artifact. Do not claim novelty or use it as a standalone study or funding proposal.
+
+**Next candidate for review:** Audit selected published runtime-verification evaluation harnesses to determine whether they distinguish experimenter-known ground truth from evidence available to an online monitor. This candidate remains unapproved and requires a defined sample, coding protocol, and prior-art review.
