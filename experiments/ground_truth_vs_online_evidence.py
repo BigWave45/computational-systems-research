@@ -122,6 +122,7 @@ def run_sweep():
     online_beacon_unknown = 0
     online_beacon_false_clear = 0
     online_no_beacon_false_clear = 0
+    online_no_beacon_safe_unknown = 0
     no_beacon_ambiguous_observation_groups = set()
 
     for trace, delivered, observation in rows:
@@ -139,6 +140,9 @@ def run_sweep():
             verdict = online_without_commitment(observation, safe=False)
             if verdict == "NO_VIOLATION" and truth(trace) == "VIOLATION":
                 online_no_beacon_false_clear += 1
+            safe_verdict = online_without_commitment(observation, safe=True)
+            if safe_verdict == "UNKNOWN":
+                online_no_beacon_safe_unknown += 1
             no_beacon_ambiguous_observation_groups.add(
                 tuple((e.seq, e.kind) for e in observation.delivered_events)
             )
@@ -149,10 +153,12 @@ def run_sweep():
     print(f"  beacon-aware incomplete outcomes: {online_beacon_unknown}")
     print(f"  beacon-aware false all-clears: {online_beacon_false_clear}")
     print(f"  no-beacon naive false all-clears: {online_no_beacon_false_clear}")
+    print(f"  no-beacon safe abstentions: {online_no_beacon_safe_unknown}")
     print(f"  distinct no-beacon observations: {len(no_beacon_ambiguous_observation_groups)}")
 
     assert online_beacon_false_clear == 0
     assert online_no_beacon_false_clear > 0
+    assert online_no_beacon_safe_unknown > 0
     assert oracle_incomplete > 0
     assert online_beacon_unknown > 0
 
