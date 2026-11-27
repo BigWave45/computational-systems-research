@@ -1,81 +1,100 @@
 #!/usr/bin/env python3
-"""Bounded check of the timestamp-to-beacon-finality implication.
+"""Bounded check of the beacon timestamp/high-water-mark implication.
 
-This is an independent model of one sentence in Section 4 of
-Kekatos et al., arXiv:2611.32868. It is NOT the authors' implementation
-and does not model the complete monitoring protocol.
+Independent abstract model of Section 4 of Kekatos et al.,
+arXiv:2611.32868. This is NOT the authors' implementation and does not
+model the complete monitoring protocol.
 
-Model:
-- one node emits four events with contiguous sequence numbers 1..4;
-- event timestamps are non-decreasing;
-- a beacon after event h commits (high_water=h, frontier=timestamp[h-1]);
-- a boundary is problematic if a later event has timestamp <= frontier.
+A one-node execution contains four events and one beacon. The beacon is
+inserted after h events. Its timestamp u is its own emission time, not
+the timestamp of the preceding event. All five timestamps are drawn
+from {0,1,2,3} and are non-decreasing in execution order.
 
-The check asks whether non-decreasing timestamps alone imply that no
-later event can fall inside the committed closed interval.
+The check asks whether non-decreasing timestamps alone guarantee that
+every event emitted after the beacon has timestamp > u. A later event
+with timestamp == u has sequence > h but lies in the paper's closed
+interval [0,u].
 """
 
 from itertools import combinations_with_replacement
 
 
-def enumerate_sequences(alphabet_size=4, event_count=4):
-    return list(combinations_with_replacement(range(alphabet_size), event_count))
+def enumerate_executions(alphabet_size=4, event_count=4):
+    """Yield (timestamps, beacon_position) for every ordered execution.
+
+    beacon_position is the number of events emitted before the beacon,
+    ranging from 1 to event_count - 1.
+    """
+    for timestamps in combinations_with_replacement(
+        range(alphabet_size), event_count + 1
+    ):
+        for beacon_position in range(1, event_count):
+            yield timestamps, beacon_position
 
 
-def problematic_boundaries(timestamps):
-    problems = []
-    for high_water in range(1, len(timestamps)):
-        frontier = timestamps[high_water - 1]
-        later = [
-            (seq, timestamp)
-            for seq, timestamp in enumerate(timestamps[high_water:], start=high_water + 1)
-            if timestamp <= frontier
-        ]
-        if later:
-            problems.append((high_water, frontier, later))
-    return problems
+def later_events_inside_closed_frontier(timestamps, beacon_position):
+    beacon_time = timestamps[beacon_position]
+    # Event timestamps after the beacon occupy the remaining positions.
+    return [
+        (sequence, timestamp)
+        for sequence, timestamp in enumerate(
+            timestamps[beacon_position + 1 :],
+            start=beacon_position + 1,
+        )
+        if timestamp <= beacon_time
+    ]
 
 
 def main():
-    nondecreasing = enumerate_sequences()
-    nondecreasing_counterexamples = [
-        (timestamps, problematic_boundaries(timestamps))
-        for timestamps in nondecreasing
-        if problematic_boundaries(timestamps)
+    executions = list(enumerate_executions())
+    problematic = [
+        (timestamps, h, later_events_inside_closed_frontier(timestamps, h))
+        for timestamps, h in executions
+        if later_events_inside_closed_frontier(timestamps, h)
     ]
 
-    strictly_increasing = [
-        timestamps
-        for timestamps in nondecreasing
-        if all(left < right for left, right in zip(timestamps, timestamps[1:]))
+    # The failure is specifically equality: monotonicity excludes < u,
+    # but permits a later event to share the beacon's timestamp.
+    equality_only = all(
+        timestamp == timestamps[h]
+        for timestamps, h, later in problematic
+        for _, timestamp in later
+    )
+
+    # A strict post-beacon timestamp condition rules out the counterexample.
+    strict_after_beacon = [
+        (timestamps, h)
+        for timestamps, h in executions
+        if all(
+            timestamp > timestamps[h]
+            for timestamp in timestamps[h + 1 :]
+        )
     ]
     strict_counterexamples = [
-        (timestamps, problematic_boundaries(timestamps))
-        for timestamps in strictly_increasing
-        if problematic_boundaries(timestamps)
+        (timestamps, h)
+        for timestamps, h in strict_after_beacon
+        if later_events_inside_closed_frontier(timestamps, h)
     ]
 
-    print(f"Non-decreasing sequences: {len(nondecreasing)}")
+    print(f"Timestamp assignments with beacon positions: {len(executions)}")
+    print(f"Assignments with a later event inside [0, u]: {len(problematic)}")
     print(
-        "Sequences with at least one problematic beacon boundary: "
-        f"{len(nondecreasing_counterexamples)}"
+        "Problematic assignments where the later event equals u: "
+        f"{len(problematic) if equality_only else 'not equality-only'}"
     )
     print(
-        "Problematic beacon boundaries (counted per sequence and high-water mark): "
-        f"{sum(len(problems) for _, problems in nondecreasing_counterexamples)}"
+        "Assignments satisfying strict timestamp increase after beacon: "
+        f"{len(strict_after_beacon)}"
     )
-    print(f"Strictly increasing sequences: {len(strictly_increasing)}")
     print(
-        "Strictly increasing sequences with problematic boundaries: "
+        "Counterexamples under strict post-beacon increase: "
         f"{len(strict_counterexamples)}"
     )
 
-    assert len(nondecreasing) == 35
-    assert len(nondecreasing_counterexamples) == 30
-    assert sum(len(problems) for _, problems in nondecreasing_counterexamples) == 60
-    assert len(strictly_increasing) == 1
+    assert len(executions) == 224
+    assert len(problematic) == 105
+    assert equality_only
     assert len(strict_counterexamples) == 0
-
     print("PASS: bounded enumeration reproduced expected counts.")
 
 
