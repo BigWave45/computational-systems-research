@@ -35,11 +35,10 @@ def truth(trace: Tuple[Event, ...]) -> str:
     return "VIOLATION" if any(e.kind == "VIOLATION" for e in trace) else "NO_VIOLATION"
 
 
-def oracle_verdict(trace: Tuple[Event, ...], delivered: FrozenSet[int]) -> str:
-    """Privileged evaluator knows all generated events and can spot loss."""
-    if delivered != frozenset(e.seq for e in trace):
-        return "UNKNOWN_INCOMPLETE"
-    return truth(trace)
+def oracle_verdict(trace: Tuple[Event, ...], delivered: FrozenSet[int]):
+    """Privileged evaluator sees full truth and separately knows delivery loss."""
+    complete = delivered == frozenset(e.seq for e in trace)
+    return truth(trace), complete
 
 
 def online_without_commitment(observation: Observation, safe: bool) -> str:
@@ -126,8 +125,8 @@ def run_sweep():
     no_beacon_ambiguous_observation_groups = set()
 
     for trace, delivered, observation in rows:
-        oracle = oracle_verdict(trace, delivered)
-        if oracle == "UNKNOWN_INCOMPLETE":
+        oracle_truth, oracle_delivery_complete = oracle_verdict(trace, delivered)
+        if not oracle_delivery_complete:
             oracle_incomplete += 1
 
         if observation.beacon_high_water is not None:
@@ -146,7 +145,7 @@ def run_sweep():
 
     print("BOUNDED DELIVERY SWEEP")
     print(f"  executions/schedules: {len(rows)}")
-    print(f"  oracle detects incomplete evidence: {oracle_incomplete}")
+    print(f"  oracle sees full truth; schedules with transport loss: {oracle_incomplete}")
     print(f"  beacon-aware incomplete outcomes: {online_beacon_unknown}")
     print(f"  beacon-aware false all-clears: {online_beacon_false_clear}")
     print(f"  no-beacon naive false all-clears: {online_no_beacon_false_clear}")
